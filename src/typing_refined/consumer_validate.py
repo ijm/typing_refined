@@ -5,6 +5,7 @@ from functools import wraps
 
 from .classes import Predicate
 from .predicates import IsPredicate
+from collections.abc import Iterator
 
 # Consumers for runtime validation
 class ValidationError(ValueError):
@@ -21,9 +22,10 @@ def validate(name:str, value: Any, annotation: Any) -> None:
     Run all predicates attached to `annotation` against `value` and raise
     on failure. This is a shallow search and does not recurse into sub-annotations
     """
-    for predicate in filter(IsPredicate, get_args(annotation)[1:]):
-        if not predicate(value):
-            raise ValidationError(name, value, predicate)
+    predicates: Iterator[Predicate] = filter(IsPredicate, get_args(annotation)[1:])
+    for p in predicates:
+        if not p(value):
+            raise ValidationError(name, value, p)
 
 
 class Validator:
