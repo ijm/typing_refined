@@ -12,18 +12,19 @@ pip install typing_refined
 
 - **Refinement types**: `{x: T | P(x)}` expressed as `Annotated[T, P(x)]`
 - **Predicates are triple-duty**: callable as `pred(x)`, annotation metadata as `Annotated[T, pred(x)]`, introspectable AST as `dataclasses.asdict(pred)`)
-- **Define once, reuse everywhere**: Same predicate object for runtime validation, static analysis, tooling, etc.
-- **No operator overloading**: compose with `PAll`, `PAny`, `Compose`. These are explicit and introspectable, and extensive enough without needing to build a complete expression algrbra.
+- **Define once, reuse everywhere**: Same predicate object for runtime validation, static analysis, tooling, etc. (DRY)
+- **Simplistic Algebra**: compose with `PAll`, `PAny`, `Compose`. These are explicit and introspectable, and extensive enough without needing to build an complex expression algebra.
 
 ### Available Predicates
 
 | Category | Predicates |
 |----------|------------|
 | Comparison | `Ge`, `Gt`, `Le`, `Lt`, `Eq`, `Ne` |
-| Numeric | `IsFinite`, `IsNan`, `IsInfinite`, `IsCongruentMod` |
+| Numeric | `IsFinite`, `IsNotFinite`, `IsNan`, `IsNotNan`, `IsInfinite`, `IsNotInfinite`, `IsCongruentMod`, `Range` |
 | String | `MatchRE` |
+| Container | `IsOneOf`, `CountOf`, `HasAtLeastOf` |
 | Length/size | `NonEmpty`, `IsEmpty`, `LengthLt`, `LengthRange` |
-| Type/Structure | `IsInstance`, `HasAttr`, `HasShape` |
+| Type/Structure | `IsInstance`, `HasAttr`, `HasShape`, `IsPredicate`, `IsOperator` |
 | Combinators | `PAll`, `PAny`, `Compose` |
 
 All predicates work as:
@@ -43,7 +44,7 @@ from typing_refined import Ge, Lt, validate
 PositiveUnder100 = Annotated[int, Ge(1), Lt(100)]
 
 # Manual validation
-validate("foo", PositiveUnder100, 50)   # returns 50
+validate("foo", PositiveUnder100, 50)   # Ok
 validate("foo", PositiveUnder100, 200)  # raises ValidationError
 ```
 
@@ -63,6 +64,24 @@ cfg = Config()
 cfg.port = 8080      # ok
 cfg.port = 70000     # raises ValidationError
 cfg.timeout = 30.0   # ok
+```
+
+### Object Validation with validate_struct()
+
+Validate all annotated fields of an object at once:
+
+```python
+from typing import Annotated
+from typing_refined import Ge, Lt, validate_struct
+
+class Config:
+    port: Annotated[int, Ge(1), Lt(65536)]
+    timeout: Annotated[float, Ge(0.1), Le(60.0)]
+
+cfg = Config()
+cfg.port = 8080
+cfg.timeout = 30.0
+validate_struct(cfg, Config)  # raises ValidationError if any field fails
 ```
 
 ### Function Argument Validation with @validate_args decorator
