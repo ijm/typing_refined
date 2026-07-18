@@ -1,18 +1,11 @@
 import operator
 import math
+import re
 from typing import Any, Optional
-from re import search
-from .classes import Predicate, Operator, OperatorR, Combinator, Compose
+from .classes import (CallL, Predicate, Operator, OperatorR, Combinator, 
+    Compose, ComposePartial, make_predicate)
 
-# Factory for predicates
-def make_predicate(name: str, base: type, **attrs: Any):
-    cls = type(name, (base,), attrs)
-    cls.__doc__ = base.__doc__.format(name=name, **attrs)
-    return cls
-    
-# Note 'type()' is used both to properly name objects and to massivly cut
-# down on the unhelpful level of boiler plate clutter.
-#         
+
 # Numerical predicates
 # Comparisons
 Ge = make_predicate('Ge', Operator, operator=operator.ge)
@@ -30,46 +23,24 @@ IsNotNan = make_predicate('IsNotNan', Operator, operator=math.isnan, neg=True)()
 IsInfinite = make_predicate('IsInfinite', Operator, operator=math.isinf)()
 IsNotInfinite = make_predicate('IsNotInfinite', Operator, operator=math.isinf, neg=True)()
 
+# Fanout combinators for Conjunction and Disjunction
+PAll = make_predicate('All', Combinator, combinator=all)
+PAny = make_predicate('Any', Combinator, combinator=any)
+
+# Misc Derived predicates
+class MatchRE(OperatorR):
+    """Some {name} -> MatchRE({bound[0]})"""
+    operator = staticmethod(re.search)
+    
 class IsCongruentMod(Operator):
     @classmethod
     def is_congruent(cls, x: int, step: int, offset: int):
         """x is in the congruence class of offset under mod step"""
         return (x - offset) % step == 0
         
-    operator = is_congruent 
+    operator = is_congruent
 
-# Class predicates
-HasAttr = make_predicate('HasAttr', Operator, operator=hasattr)
-IsInstance = make_predicate('IsInstance', Operator, operator=isinstance)
-
-IsPredicate = IsInstance(Predicate)
-IsOperator = IsInstance(Operator)
-
-# Container predicates
-IsOneOf = make_predicate('IsOneOf', OperatorR, operator=operator.contains)
-CountOf = make_predicate('CountOf', Operator, operator=operator.countOf)
-
-
-class HasAtLeastOf(Compose):
-    def __init__(self, x: Any, y:Any):
-        super().__init__(Ge(x), CountOf(y))
-
-        
-# Fanout combinators for Conjunction and Disjunction
-PAll = make_predicate('All', Combinator, combinator=all)
-PAny = make_predicate('Any', Combinator, combinator=any)
-
-
-# String predicates
-class MatchRE(Operator):
-    @classmethod
-    def is_match_re(cls, value: str, pattern: str) -> bool:
-        return search(pattern, value) is not None
-        
-    operator = is_match_re
-
-
-# Derived predicates
+    
 class Range(PAll):
     """Range predicate with same signature as built-in range()"""
     def __init__(self, a: int, b: Optional[int] = None, step: int = 1):
@@ -77,20 +48,6 @@ class Range(PAll):
             object.__setattr__(self, "bound", (Ge(0), Lt(a), IsCongruentMod(step, 0)))
         else:
             object.__setattr__(self, "bound", (Ge(a), Lt(b), IsCongruentMod(step, a)))
-
-     
-IsEmpty = make_predicate('IsEmpty', Compose)(Eq(0), len)
-NonEmpty = make_predicate('NonEmpty', Compose)(Gt(0), len)
-
-
-class LengthLt(Compose):
-    def __init__(self, x: Any):
-        super().__init__(Lt(x), len)
-
-        
-class LengthRange(Compose):
-    def __init__(self, a: int, b: Optional[int] = None, step: int = 1):
-        super().__init__(Range(a, b, step), len)       
 
 
 class HasShape(Operator):
@@ -103,3 +60,24 @@ class HasShape(Operator):
         return all(hasattr(value, a) for a in attrs)
         
     operator = has_shape
+
+
+# Class predicates
+HasAttr = make_predicate('HasAttr', Operator, operator=hasattr)
+IsInstance = make_predicate('IsInstance', Operator, operator=isinstance)
+
+IsPredicate = IsInstance(Predicate)
+IsOperator = IsInstance(Operator)
+
+# Container and size predicates
+IsEmpty = make_predicate('IsEmpty', Compose)(Eq(0), len)
+NonEmpty = make_predicate('NonEmpty', Compose)(Gt(0), len)
+IsOneOf = make_predicate('IsOneOf', OperatorR, operator=operator.contains)
+CountOf = make_predicate('CountOf', CallL, operator=operator.countOf)
+LengthLt = make_predicate('LengthLt', ComposePartial, comp=(Lt, len))
+LengthRange = make_predicate('LengthRange', ComposePartial, comp=(Range, len))
+HasKeys = make_predicate('HasKeys', ComposePartial, comp=(Ge, dict.keys)) # pyright: ignore[reportUnknownMemberType]  
+
+class HasAtLeastOf(Compose):
+    def __init__(self, x: Any, y:Any):
+        super().__init__(Ge(x), CountOf(y))

@@ -35,12 +35,12 @@ ordinary Python analysis, even if it cannot interpret the raw metadata.
 """
 
 
-from .classes import Combinator, Compose, Operator, OperatorR, Predicate
+from .classes import Combinator, Compose, ComposePartial, Operator, OperatorR, Predicate, make_predicate
 from .predicates import (
     Ge, Gt, Le, Lt, Eq, Ne,
     IsFinite, IsNotFinite, IsNan, IsNotNan, IsInfinite, IsNotInfinite,
     IsCongruentMod,
-    HasAttr, HasShape,
+    HasAttr, HasShape, HasKeys,
     IsInstance, IsPredicate, IsOperator,
     PAll, PAny,
     MatchRE,
@@ -51,10 +51,10 @@ from .predicates import (
 from .consumer_validate import ValidationError, validate, Validator, validate_args, validate_struct
 
 __all__ = [
-    "Predicate", "Operator", "OperatorR", "Combinator", "Compose",
+    "Predicate", "Operator", "OperatorR", "Combinator", "Compose", "ComposePartial", "make_predicate",
     "Ge", "Gt", "Le", "Lt", "Eq", "Ne",
     "IsFinite", "IsNotFinite", "IsNan", "IsNotNan", "IsInfinite", "IsNotInfinite",
-    "HasAttr", "IsInstance", "IsPredicate", "IsOperator", "HasShape",
+    "HasAttr", "IsInstance", "IsPredicate", "IsOperator", "HasShape", "HasKeys",
     "IsCongruentMod",
     "PAll", "PAny",
     "MatchRE", 
