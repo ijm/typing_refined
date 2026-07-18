@@ -42,7 +42,7 @@ IsBase58Alphabet = _make_regex('Base58Alphabet', r"^[1-9A-HJ-NP-Za-km-z]+$") # B
 
 
 def _isbn(regexp: re.Pattern[str], trans: dict[int, str | None], s: str) -> str | None:
-    m : re.Match[str] | None = regexp.search(s)
+    m : re.Match[str] | None = regexp.fullmatch(s)
     return m[1].translate(trans) if m else None
     
     

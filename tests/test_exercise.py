@@ -14,9 +14,6 @@ from typing_refined import (
     ValidationError, validate, Validator, validate_args, validate_struct,
 )
 
-import typing_refined as V
-print(f"{V.__file__=}")
-
 # Predicate exerciser.
 
 PREDICATE_TESTS: list[tuple[Predicate, list[Any], list[Any]]] = [
@@ -55,9 +52,9 @@ PREDICATE_TESTS: list[tuple[Predicate, list[Any], list[Any]]] = [
     # container predicates
     (IsOneOf(["red", "green", "blue"]), ["red", "green", "blue"], ["yellow", "", 1]),
     (HasAtLeastOf(3, "a"), ["aaa", "ababa", ["a", "a", "a"]],
-            ["aa", "bb", ["a", "a"]]),
-        (HasKeys({"name", "age"}), [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25, "city": "NYC"}],
-            [{"name": "Alice"}, {"age": 30}, {}]),
+        ["aa", "bb", ["a", "a"]]),
+    (HasKeys({"name", "age"}), [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25, "city": "NYC"}],
+        [{"name": "Alice"}, {"age": 30}, {}]),
     ]
 
 

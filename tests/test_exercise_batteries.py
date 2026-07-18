@@ -12,9 +12,6 @@ from typing_refined.batteries import (
 )
 from typing_refined import Predicate
 
-import typing_refined as V
-print(f"{V.__file__=}")
-
 # Predicate exerciser for batteries.
 
 PREDICATE_TESTS: list[tuple[Predicate, list[Any], list[Any]]] = [
@@ -25,25 +22,34 @@ PREDICATE_TESTS: list[tuple[Predicate, list[Any], list[Any]]] = [
     (IsPrintable, ["abc", "123", "foo bar", "foo-bar"], ["\x00", "\x1f", "\u0000"]),
 
     # Regex-based predicates
-    (IsEmail_Zod, ["foo@bar.com", "test.email+tag@domain.co.uk", "user123@site.org"],
+    (IsEmail_Zod,
+        ["foo@bar.com", "test.email+tag@domain.co.uk", "user123@site.org"],
         ["notanemail", "@domain.com", "foo@.com", "foo@bar", "foo@bar."]),
-    (IsSimpleURL, ["http://example.com", "https://foo.bar/path", "http://sub.domain.org"],
+    (IsSimpleURL,
+        ["http://example.com", "https://foo.bar/path", "http://sub.domain.org"],
         ["notaurl", "ftp://example.com", "http://", "http:/example.com"]),
-    (IsUUID, ["123e4567-e89b-12d3-a456-426614174000", "00000000-0000-4000-8000-000000000000"],
+    (IsUUID,
+        ["123e4567-e89b-12d3-a456-426614174000", "00000000-0000-4000-8000-000000000000"],
         ["not-a-uuid", "123e4567-e89b-12d3-a456-42661417400", "123e4567-e89b-12d3-a456-42661417400g"]),
-    (IsISBN10Check(), ["0321146530", "080442957X"], ["notanisbn", "032114653", "abcdefghij"]),
-        (IsISBN13Check(), ["9780321146533"], ["notanisbn", "978032114653", "abcdefghijklm"]),
-        (IsISBN10Format, ["ISBN 0-321-14653-0", "0321146530", "0-321-14653-X"],
-            ["notanisbn", "032114653", "abcdefghij"]),
-        (IsISBN13Format, ["ISBN 978-0-321-14653-3", "9780321146533"],
-            ["notanisbn", "978032114653", "abcdefghijklm"]),
-    (IsISODateFormat, ["2024-01-15", "2024-12-31", "2000-02-29"],
+    (IsISBN10Check(), ["ISBN 0-321-14653-0", "080442957X"], ["notanisbn", "032114653", "abcdefghij"]),
+    (IsISBN13Check(), ["9780321146533"], ["notanisbn", "978032114653", "abcdefghijklm"]),
+    (IsISBN10Format,
+        ["ISBN 0-321-14653-0", "0321146530", "0-321-14653-X"],
+        ["notanisbn", "032114653", "abcdefghij"]),
+    (IsISBN13Format,
+        ["ISBN 978-0-321-14653-3", "9780321146533"],
+        ["notanisbn", "978032114653", "abcdefghijklm"]),
+    (IsISODateFormat,
+        ["2024-01-15", "2024-12-31", "2000-02-29"],
         ["not-a-date", "15-01-2024", "2024/01/15", "2024-1-5"]),
-    (IsISODateTimeFormat, ["2024-01-15T10:30:00", "2024-01-15T10:30:00.123", "2024-01-15T10:30:00Z", "2024-01-15T10:30:00+05:00"],
+    (IsISODateTimeFormat,
+        ["2024-01-15T10:30:00", "2024-01-15T10:30:00.123", "2024-01-15T10:30:00Z", "2024-01-15T10:30:00+05:00"],
         ["not-a-datetime", "2024-01-15 10:30:00", "15-01-2024T10:30:00"]),
-    (IsBase64, ["", "YQ==", "YWI=", "YWJj", "YWJjZA=="],
+    (IsBase64,
+        ["", "YQ==", "YWI=", "YWJj", "YWJjZA=="],
         ["not-base64!", "YWI", "YWJjZ", "===="]),
-    (IsBase58Alphabet, ["1", "12", "1A", "1a", "z", "11111111111111111111111111111111111111111111111111111"],
+    (IsBase58Alphabet,
+        ["1", "12", "1A", "1a", "z", "11111111111111111111111111111111111111111111111111111"],
         ["0", "O", "I", "l", "not-base58", ""]),
 
     # Length predicates (ComposePartial)
@@ -70,7 +76,6 @@ PREDICATE_TESTS: list[tuple[Predicate, list[Any], list[Any]]] = [
 def test_battery_predicates():
     """Exercise all battery predicates with pass/fail cases."""
     for pred, pass_vals, fail_vals in PREDICATE_TESTS:
-        print(pred, pass_vals, fail_vals)
         for v in pass_vals:
             assert pred(v), f"{pred!r} should pass for {v!r}"
         for v in fail_vals:
