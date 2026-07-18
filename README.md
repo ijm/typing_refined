@@ -22,7 +22,7 @@ pip install typing_refined
 | Comparison | `Ge`, `Gt`, `Le`, `Lt`, `Eq`, `Ne` |
 | Numeric | `IsFinite`, `IsNotFinite`, `IsNan`, `IsNotNan`, `IsInfinite`, `IsNotInfinite`, `IsCongruentMod`, `Range` |
 | String | `MatchRE` |
-| Container | `IsOneOf`, `CountOf`, `HasAtLeastOf` |
+| Container | `IsOneOf`, `CountOf`, `HasAtLeastOf`, `HasKeys` |
 | Length/size | `NonEmpty`, `IsEmpty`, `LengthLt`, `LengthRange` |
 | Type/Structure | `IsInstance`, `HasAttr`, `HasShape`, `IsPredicate`, `IsOperator` |
 | Combinators | `PAll`, `PAny`, `Compose` |
@@ -32,7 +32,23 @@ All predicates work as:
 - Annotation metadata : inside `Annotated[T, predicate]`
 - Introspectable : `dataclasses.asdict(predicate)` returns full AST
 
-## Quick example for the runtime validation comsumer.
+## Batteries Included (Additional Predicates)
+
+Additional example predicates for uncommon or application specific validation scenarios are available in the `batteries` module:
+
+| Category | Predicates |
+|----------|------------|
+| String checks | `IsAlpha`, `IsAlphaNumeric`, `IsNumeric`, `IsPrintable` |
+| Format validation | `IsEmail_Zod`, `IsSimpleURL`, `IsUUID`, `IsISBN10Check`, `IsISBN13Check`, `IsISBN10Format`, `IsISBN13Format` |
+| Date/Time formats | `IsISODateFormat`, `IsISODateTimeFormat` |
+| Encoding | `IsBase64`, `IsBase58Alphabet` |
+| Length (extended) | `LengthEq`, `LengthGe`, `LengthGt`, `LengthLe` |
+| Count (extended) | `CountGe`, `CountGt`, `CountLe`, `CountLt` |
+| Numeric conveniences | `Positive`, `Negative`, `NonZero`, `NonNegative`, `NonPositive` |
+
+Import from `typing_refined.batteries` and use the same way as core predicates.
+
+## Quick example for the runtime validation consumer.
 
 ### Explicit (manual) validation
 
