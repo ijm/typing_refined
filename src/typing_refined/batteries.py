@@ -77,7 +77,7 @@ class IsISBN13Check(Operator):
 IsISBN13Format = _make_regex('IsISBN13Format', IsISBN13Check.ISBN13_RE)
         
 # More Length predicates
-LengthEq = make_predicate('LengthGe', ComposePartial, comp=(Eq, len))
+LengthEq = make_predicate('LengthEq', ComposePartial, comp=(Eq, len))
 LengthGe = make_predicate('LengthGe', ComposePartial, comp=(Ge, len))
 LengthGt = make_predicate('LengthGt', ComposePartial, comp=(Gt, len))
 LengthLe = make_predicate('LengthLe', ComposePartial, comp=(Le, len))

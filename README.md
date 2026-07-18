@@ -70,7 +70,7 @@ Use `Validator` as a descriptor to enforce predicates on attribute assignment:
 
 ```python
 from typing import Annotated
-from typing_refined import Ge, Lt, Validator, ValidationError
+from typing_refined import Ge, Lt, Le, Validator, ValidationError
 
 class Config:
     port: Annotated[int, Ge(1), Lt(65536)] = Validator()
