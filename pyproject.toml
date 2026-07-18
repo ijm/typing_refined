@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "typing_refined"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Refined typing utilities for Python."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
@@ -34,6 +34,9 @@ Repository = "https://github.com/ijm/typing_refined"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools_scm]
+version_file = "src/typing_refined/_version.py"
 
 [project.optional-dependencies]
 dev = [

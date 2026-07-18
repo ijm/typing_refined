@@ -49,6 +49,7 @@ from .predicates import (
     IsOneOf, CountOf, HasAtLeastOf,
 )
 from .consumer_validate import ValidationError, validate, Validator, validate_args, validate_struct
+from ._version import __version__
 
 __all__ = [
     "Predicate", "Operator", "OperatorR", "Combinator", "Compose", "ComposePartial", "make_predicate",
@@ -63,4 +64,5 @@ __all__ = [
     "IsOneOf", "CountOf", "HasAtLeastOf",
     "ValidationError",
     "validate", "Validator", "validate_args", "validate_struct",
+    "__version__",
 ]
