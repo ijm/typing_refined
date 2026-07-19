@@ -17,7 +17,7 @@ class OperadPartial(ABC):
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        pass
+        raise AssertionError()
 
 
 class CallR(OperadPartial):
