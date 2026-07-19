@@ -24,8 +24,8 @@ IsInfinite = make_predicate('IsInfinite', Operator, operator=math.isinf)()
 IsNotInfinite = make_predicate('IsNotInfinite', Operator, operator=math.isinf, neg=True)()
 
 # Fanout combinators for Conjunction and Disjunction
-PAll = make_predicate('All', Combinator, combinator=all)
-PAny = make_predicate('Any', Combinator, combinator=any)
+PAll = make_predicate('All', Combinator, operator=all)
+PAny = make_predicate('Any', Combinator, operator=any)
 
 # Misc Derived predicates
 class MatchRE(OperatorR):
@@ -41,13 +41,13 @@ class IsCongruentMod(Operator):
     operator = is_congruent
 
     
-class Range(PAll):
+class Range(PAll): # type: ignore[valid-type, misc]
     """Range predicate with same signature as built-in range()"""
     def __init__(self, a: int, b: Optional[int] = None, step: int = 1):
         if b is None:
-            object.__setattr__(self, "bound", (Ge(0), Lt(a), IsCongruentMod(step, 0)))
+            super().__init__(Ge(0), Lt(a), IsCongruentMod(step, 0))
         else:
-            object.__setattr__(self, "bound", (Ge(a), Lt(b), IsCongruentMod(step, a)))
+            super().__init__(Ge(a), Lt(b), IsCongruentMod(step, a))
 
 
 class HasShape(Operator):

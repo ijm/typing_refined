@@ -7,16 +7,19 @@ from dataclasses import dataclass
 @dataclass(frozen=True, init=False, repr=False)
 class OperadPartial(ABC):
     """Base Operad class to capture partial arguments"""
+    class_: str = "---"
     bound: tuple[Any, ...] = ()
     operator: Callable[..., Any] = (lambda *_: None)
        
     def __init__(self, *args: Any):
+        object.__setattr__(self, "class_", type(self).__name__)
         object.__setattr__(self, "bound", self.bound + args)
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         pass
-        
+
+
 class CallR(OperadPartial):
     """Free variables last (after bound)"""
     def __call__(self, *free: Any, **kwargs: Any) -> Any:
@@ -67,21 +70,20 @@ class OperatorR(Predicate, CallR):
 @dataclass(frozen=True, init=False, repr=False)
 class Combinator(Predicate):
     """ Predicate partial construction wrapper for the fanout:
-        {name}(predicates...)(x) -> {combinator.__name__}(p(x) for p in predicates)"""
-    combinator: Callable[..., bool]
+        {name}(predicates...)(x) -> {operator.__name__}(p(x) for p in predicates)"""
+    #combinator: Callable[..., bool]
         
     def __call__(self, value: Any) -> bool:
-        return self.neg ^ self.combinator(p(value) for p in self.bound)
+        return self.neg ^ self.operator(p(value) for p in self.bound)
 
        
 @dataclass(frozen=True, init=False, repr=False)
 class Compose(Predicate):
     """Predicate partial construction for the function composition:
     {name}(predicate, f1, f2, ...)(x) -> predicate(f1(f2...(x)))"""
-    compose: bool = True # marker for metadata
     
     def __init__(self, pred: Predicate, *funcs: Callable[[Any], Any]) -> None:
-        object.__setattr__(self, "bound", (pred, *funcs))
+        super().__init__(pred, *funcs)
             
     def __call__(self, value: Any) -> bool:
         for func in reversed(self.bound):
