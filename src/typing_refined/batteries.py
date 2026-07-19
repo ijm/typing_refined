@@ -41,16 +41,14 @@ IsBase64 = _make_regex('Base64', r"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[
 IsBase58Alphabet = _make_regex('Base58Alphabet', r"^[1-9A-HJ-NP-Za-km-z]+$") # Bitcoin addresses
 
 
-def _isbn(regexp: re.Pattern[str], trans: dict[int, str | None], s: str) -> str | None:
+def _isbn(regexp: re.Pattern[str], trans: dict[int, int | None], s: str) -> str | None:
     m : re.Match[str] | None = regexp.fullmatch(s)
     return m[1].translate(trans) if m else None
     
     
 class IsISBN10Check(Operator):
     ISBN10_RE: re.Pattern[str] = re.compile(r'(?:ISBN[- ]*)?((?:\d[- ]*){9}[0-9Xx])')
-    ISBN10_TRANS: dict[int, str | None] = str.maketrans(
-        {'-': None, ' ': None, 'X': ':', 'x': ':', }
-    )
+    ISBN10_TRANS: dict[int, int | None] = str.maketrans("Xx","::","- ")
     
     @classmethod 
     def checksum(cls, s: str) -> bool:
@@ -64,7 +62,7 @@ IsISBN10Format = _make_regex('IsISBN10Format', IsISBN10Check.ISBN10_RE)
 
 class IsISBN13Check(Operator):
     ISBN13_RE: re.Pattern[str] = re.compile(r'(?:ISBN[- ]*)?((?:\d[- ]*){13})' )
-    ISBN13_TRANS: dict[int, str | None] = str.maketrans({'-': None, ' ': None})
+    ISBN13_TRANS: dict[int, int | None] = str.maketrans("", "", "- ")
     
     @classmethod 
     def checksum(cls, s: str) -> bool:
