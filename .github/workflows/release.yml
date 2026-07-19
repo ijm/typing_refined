@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
-      id-token: write  # OIDC for trusted publishing; no API token needed
+      id-token: write  # OIDC for trusted publishing
     steps:
       - uses: actions/download-artifact@v8
         with:
