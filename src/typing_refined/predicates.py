@@ -1,3 +1,8 @@
+"""
+Common pre-defined predicates.
+
+Note: Predicated that don't need arguments are pre-instantiated to avoid extra '()'s when used.
+"""
 import operator
 import math
 import re
