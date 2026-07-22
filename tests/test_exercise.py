@@ -1,6 +1,6 @@
 """Minimal exerciser for typing_refined predicates, Validator, and validate_args."""
 
-from typing import Annotated, Any
+from typing import Annotated, Any, TypedDict, Unpack, Self, Required, NotRequired
 from typing_refined import (
     Predicate, 
     Ge, Gt, Le, Lt, Eq, Ne,
@@ -182,10 +182,88 @@ def test_validate_function():
     print("validate() function tests passed")
 
 
+class InnerMod(TypedDict):
+    port: Required[Annotated[int, Ge(1), Lt(65536)]]
+    label: NotRequired[Annotated[str, NonEmpty]]
+
+
+class OuterMod(TypedDict):
+    inner: InnerMod
+
+
+class OuterModAnnotated(TypedDict):
+    inner: Annotated[InnerMod, IsInstance(dict)]
+
+
+def test_wrappers_and_nesting():
+    """Required/NotRequired modulators + Annotated[Struct] descent + dotted names."""
+    # Required present & valid, NotRequired absent -> passes.
+    validate_struct({"inner": {"port": 80}}, OuterModAnnotated)
+
+    # Required present, inner predicate fails -> dotted name 'inner.port'.
+    try:
+        validate_struct({"inner": {"port": 0}}, OuterModAnnotated)
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "inner.port" and e.value == 0
+
+    # Required nested field absent -> raises on 'inner.port'.
+    try:
+        validate_struct({"inner": {}}, OuterMod)
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "inner.port"
+
+    # NotRequired inner field absent -> still passes.
+    validate_struct({"inner": {"port": 80}}, OuterModAnnotated)
+
+    print("wrappers+nesting tests passed")
+
+
+class Options(TypedDict):
+    x: Annotated[int, Ge(0)]
+    name: Annotated[str, Ne("")]
+
+@validate_args
+def configure(**kwargs: Unpack[Options]) -> str:
+    return f"{kwargs['x']} {kwargs['name']}"
+
+def test_unpack_args():
+    """validate_args descends into Unpack[TypedDict] field by field.
+    """
+    assert configure(x=1, name="foo") == "1 foo"
+
+    try:
+        configure(x=-1, name="foo")
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "kwargs.x" and e.value == -1
+
+    try:
+        configure(x=1, name="")
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "kwargs.name" and e.value == ""
+
+    print("unpack_args tests passed")
+
+
+def test_leaf_regression():
+    validate("v", object(), Self)        # type: ignore[arg-type]
+    validate("v", [1, 2], list[int])
+    validate("v", 5, int)
+    validate("v", "foo", str)
+    validate("v", {1: 2}, dict)
+    print("leaf_regression tests passed")
+
+
 if __name__ == "__main__":
     test_predicates()
     test_validator()
     test_validate_args()
     test_validate_struct()
     test_validate_function()
+    test_wrappers_and_nesting()
+    test_unpack_args()
+    test_leaf_regression()
     print("Done.")

@@ -1,11 +1,11 @@
 from collections.abc import Callable
-from typing import Any, get_args, get_type_hints
+from typing import (Any, get_args, get_type_hints, get_origin,
+    Annotated, Unpack, Required, NotRequired)
 from inspect import signature
 from functools import wraps
 
 from .classes import Predicate
-from .predicates import IsPredicate
-from collections.abc import Iterator
+from .predicates import IsPredicate, IsMapping
 
 # Consumers for runtime validation
 class ValidationError(ValueError):
@@ -17,15 +17,60 @@ class ValidationError(ValueError):
         super().__init__(f"{value!r} for {name} failed validation {predicate!r}")
 
       
-def validate(name:str, value: Any, annotation: Any) -> None:
+class IsRequiredField(Predicate):
+    """Sentinel predicate for missing fields."""
+    MISSING = object()
+
+
+def validate(name: str,
+    value: Any,
+    hint: Any,
+    unwrapped: frozenset[Any] = frozenset()
+) -> None:
+    """Recurse: validate `value` against `hint`, descending into nested
+    structs as the hint dictates. `unwrapped` accumulates Required/
+    NotRequired modifiers seen on the path from the root value to here.
     """
-    Run all predicates attached to `annotation` against `value` and raise
-    on failure. This is a shallow search and does not recurse into sub-annotations
-    """
-    predicates: Iterator[Predicate] = filter(IsPredicate, get_args(annotation)[1:])
-    for p in predicates:
-        if not p(value):
-            raise ValidationError(name, value, p)
+
+    def field_value(obj: Any, field: str) -> Any:
+        """Fetch a field from a mapping or object; `MISSING` if absent."""
+        if IsMapping(obj):
+            return obj.get(field, IsRequiredField.MISSING) 
+        return getattr(obj, field, IsRequiredField.MISSING)
+
+
+    origin = get_origin(hint)
+
+    #  Required/NotRequired modulate how a later missing-field case reads
+    #  (Required -> failure, NotRequired -> pass).
+    if origin in (Required, NotRequired):
+        return validate(name, value, get_args(hint)[0], unwrapped | {origin})
+
+    # 2. Annotated: run attached predicates against the present value,
+    #    then recurse on the bare type so a struct-typed
+    #    Annotated[X, preds] still descends into its fields.
+    if origin is Annotated:
+        if value is IsRequiredField.MISSING:
+            if Required in unwrapped:
+                raise ValidationError(name, IsRequiredField.MISSING, IsRequiredField())
+            return
+        for p in filter(IsPredicate, get_args(hint)[1:]):
+            if not p(value):
+                raise ValidationError(name, value, p)
+        return validate(name, value, get_args(hint)[0], unwrapped)
+
+    # 3. Struct: iterate declared fields, fetch the value for each.
+    #    An Unpack[X] walks X's fields.
+    field_hints: dict[str, Any] = {}
+    if origin is Unpack:
+        field_hints = get_type_hints(get_args(hint)[0], include_extras=True)
+    elif origin is None and isinstance(hint, type):
+        field_hints = get_type_hints(hint, include_extras=True)
+    for field, field_hint in field_hints.items():
+        full = f"{name}.{field}" if name else field
+        sub = field_value(value, field)
+        validate(full, sub, field_hint, frozenset())
+    # 4. (Union would go here. Not today.)
 
 
 class Validator:
@@ -54,8 +99,7 @@ def validate_struct(instance: Any, typed_type: type) -> None:
     Validate every annotated field of `instance` against predicates in
     the type hints of `typed_type`.
     """
-    for name, hint in get_type_hints(typed_type, include_extras=True).items():
-        validate(name, getattr(instance, name), hint)
+    validate("", instance, typed_type)
 
 
 def validate_args(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -73,7 +117,6 @@ def validate_args(fn: Callable[..., Any]) -> Callable[..., Any]:
     """
     
     hints: dict[str, Any] = get_type_hints(fn, include_extras=True)
-
     @wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         for k, v in signature(fn).bind(*args, **kwargs).arguments.items():
