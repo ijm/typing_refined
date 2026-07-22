@@ -1,6 +1,7 @@
+import typing
+import builtins
 from collections.abc import Callable
-from typing import (Any, get_args, get_type_hints, get_origin,
-    Annotated, Unpack, Required, NotRequired)
+from typing import Any, get_args, get_type_hints, get_origin
 from inspect import signature
 from functools import wraps
 
@@ -8,6 +9,7 @@ from .classes import Predicate
 from .predicates import IsPredicate, IsMapping
 
 # Consumers for runtime validation
+ 
 class ValidationError(ValueError):
     """Raised when a value fails an attached Predicate."""
     def __init__(self, name: str, value: Any, predicate: Predicate):
@@ -28,59 +30,62 @@ def validate(name: str,
     unwrapped: frozenset[Any] = frozenset()
 ) -> None:
     """Recurse: validate `value` against `hint`, descending into nested
-    structs as the hint dictates. `unwrapped` accumulates Required/
-    NotRequired modifiers seen on the path from the root value to here.
+    structs as the hint dictates. `unwrapped` accumulates modifiers seen on
+    the path from the root value to here.
     """
 
     def field_value(obj: Any, field: str) -> Any:
-        """Fetch a field from a mapping or object; `MISSING` if absent."""
+        """Fetch a field from a mapping or object returning
+        `IsRequiredField.MISSING` if absent."""
         if IsMapping(obj):
             return obj.get(field, IsRequiredField.MISSING) 
         return getattr(obj, field, IsRequiredField.MISSING)
 
 
     origin = get_origin(hint)
+    args = get_args(hint)
+    
+    match origin:
+        case typing.Required | typing.NotRequired:
+            #  Required/NotRequired modulate how a later missing-field case reads
+            #  (Required -> failure, NotRequired -> pass).
+            return validate(name, value, args[0], unwrapped | {origin})
 
-    #  Required/NotRequired modulate how a later missing-field case reads
-    #  (Required -> failure, NotRequired -> pass).
-    if origin in (Required, NotRequired):
-        return validate(name, value, get_args(hint)[0], unwrapped | {origin})
+        case typing.Annotated:
+            #  Run attached predicates against the present value, then recurse.
+            if value is IsRequiredField.MISSING:
+                if typing.Required in unwrapped:
+                    raise ValidationError(name, IsRequiredField.MISSING, IsRequiredField())
+                return
+            for p in filter(IsPredicate, args[1:]):
+                if not p(value):
+                    raise ValidationError(name, value, p)
+            return validate(name, value, args[0], unwrapped)
 
-    # 2. Annotated: run attached predicates against the present value,
-    #    then recurse on the bare type so a struct-typed
-    #    Annotated[X, preds] still descends into its fields.
-    if origin is Annotated:
-        if value is IsRequiredField.MISSING:
-            if Required in unwrapped:
-                raise ValidationError(name, IsRequiredField.MISSING, IsRequiredField())
-            return
-        for p in filter(IsPredicate, get_args(hint)[1:]):
-            if not p(value):
-                raise ValidationError(name, value, p)
-        return validate(name, value, get_args(hint)[0], unwrapped)
+        case typing.Unpack:
+            #  Iterate declared fields of the inner TypedDict/class.
+            field_hints = get_type_hints(args[0], include_extras=True)
+            for field, field_hint in field_hints.items():
+                full = f"{name}.{field}" if name else field
+                validate(full, field_value(value, field), field_hint, frozenset())
 
-    # 3. Struct: iterate declared fields, fetch the value for each.
-    #    An Unpack[X] walks X's fields.
-    field_hints: dict[str, Any] = {}
-    if origin is Unpack:
-        field_hints = get_type_hints(get_args(hint)[0], include_extras=True)
-    elif origin is None and isinstance(hint, type):
-        field_hints = get_type_hints(hint, include_extras=True)
-    for field, field_hint in field_hints.items():
-        full = f"{name}.{field}" if name else field
-        sub = field_value(value, field)
-        validate(full, sub, field_hint, frozenset())
-    # 3b. tuple[X, Y, ...] or tuple[X, ...]: walk indexed elements.
-    #    No MISSING case; tuples can't be missing members at runtime.
-    if origin is tuple:
-        args = get_args(hint)
-        if args and isinstance(value, (tuple, list)):
-            if len(args) == 2 and args[1] is Ellipsis:
-                pattern = (args[0],) * len(value)
-            else:
-                pattern = args
-            for i, (elem, elem_hint) in enumerate(zip(value, pattern)):
-                validate(f"{name}[{i}]" if name else f"[{i}]", elem, elem_hint)
+        case None if isinstance(hint, type):
+            #  Bare struct: walk its own fields.
+            field_hints = get_type_hints(hint, include_extras=True)
+            for field, field_hint in field_hints.items():
+                full = f"{name}.{field}" if name else field
+                validate(full, field_value(value, field), field_hint, frozenset())
+
+        case builtins.tuple:
+            #  tuple[X, Y, ...] or tuple[X, ...]: walk indexed elements.
+            is_var = len(args) == 2 and args[1] is Ellipsis
+            for i in range(len(value)):
+                validate(f"{name or ''}[{i}]",
+                    value[i], args[0 if is_var else i])
+             
+            
+        case _:
+            pass  # leaf: Self, list[int], primitives, etc.
     # 4. (Union would go here. Not today.)
 
 
