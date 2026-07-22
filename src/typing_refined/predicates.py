@@ -1,10 +1,10 @@
 import operator
 import math
 import re
-from typing import Any, Optional
+from typing import Any, Optional, TypeGuard, TypeVar, Generic
 from .classes import (CallL, Predicate, Operator, OperatorR, Combinator, 
     Compose, ComposePartial, make_predicate)
-
+from collections.abc import Mapping
 
 # Numerical predicates
 # Comparisons
@@ -64,10 +64,19 @@ class HasShape(Operator):
 
 # Class predicates
 HasAttr = make_predicate('HasAttr', Operator, operator=hasattr)
-IsInstance = make_predicate('IsInstance', Operator, operator=isinstance)
 
-IsPredicate = IsInstance(Predicate)
-IsOperator = IsInstance(Operator)
+#IsInstance = make_predicate('IsInstance', Operator, operator=isinstance)
+
+T = TypeVar('T')
+
+class IsInstance(Operator, Generic[T]):
+    operator = isinstance
+    def __call__(self, obj: Any) -> TypeGuard[T]:
+        return super().__call__(obj)
+
+IsPredicate = IsInstance[Predicate](Predicate)
+IsOperator = IsInstance[Operator](Operator)
+IsMapping = IsInstance[Mapping[Any,Any]](Mapping)
 
 # Container and size predicates
 IsEmpty = make_predicate('IsEmpty', Compose)(Eq(0), len)
