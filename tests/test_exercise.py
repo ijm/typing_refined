@@ -1,6 +1,7 @@
 """Minimal exerciser for typing_refined predicates, Validator, and validate_args."""
 
-from typing import Annotated, Any, TypedDict, Unpack, Self, Required, NotRequired
+from typing import (Annotated, Any, TypedDict, Unpack, Self,
+    Required, NotRequired, NamedTuple)
 from typing_refined import (
     Predicate, 
     Ge, Gt, Le, Lt, Eq, Ne,
@@ -248,6 +249,9 @@ def test_unpack_args():
     print("unpack_args tests passed")
 
 
+# Non-struct hints (typing.Self, generics, primitives) bottom out as leaves
+# without raising.
+
 def test_leaf_regression():
     validate("v", object(), Self)        # type: ignore[arg-type]
     validate("v", [1, 2], list[int])
@@ -255,6 +259,70 @@ def test_leaf_regression():
     validate("v", "foo", str)
     validate("v", {1: 2}, dict)
     print("leaf_regression tests passed")
+
+
+# NamedTuple: a class with __annotations__, reachable via the bare-struct
+# path (origin None, isinstance(hint, type)).
+
+class PointNT(NamedTuple):
+    x: Annotated[int, Ge(0)]
+    y: Annotated[int, Le(100)]
+
+def test_named_tuple():
+    """validate() descends into a NamedTuple's annotated fields."""
+    validate_struct(PointNT(1, 50), PointNT)   # ok
+
+    try:
+        validate_struct(PointNT(-1, 50), PointNT)
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "x" and e.value == -1
+
+    try:
+        validate_struct(PointNT(1, 200), PointNT)
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "y" and e.value == 200
+
+    print("named_tuple tests passed")
+
+
+# tuple[X, Y, ...] (fixed arity) and tuple[X, ...] (variable arity)->
+# indexed element walk. Named errors as `[i]`.
+
+PosPair = tuple[Annotated[int, Ge(0)], Annotated[int, Le(100)]]
+NonNegSeq = tuple[Annotated[int, Ge(0)], ...]
+
+def test_tuple_walk():
+    """validate() descends into tuple[X, ...] and tuple[X, Y] hints."""
+    # Fixed arity, valid.
+    validate("t", (5, 50), PosPair)
+
+    # Fixed arity, first predicate fails.
+    try:
+        validate("t", (-1, 50), PosPair)
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "t[0]" and e.value == -1
+
+    # Fixed arity, second predicate fails.
+    try:
+        validate("t", (5, 200), PosPair)
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "t[1]" and e.value == 200
+
+    # Variable arity, all valid.
+    validate("s", (0, 1, 2, 3), NonNegSeq)
+
+    # Variable arity, third element fails.
+    try:
+        validate("s", (0, 1, -2, 3), NonNegSeq)
+        assert False, "should have raised"
+    except ValidationError as e:
+        assert e.name == "s[2]" and e.value == -2
+
+    print("tuple_walk tests passed")
 
 
 if __name__ == "__main__":
@@ -266,4 +334,6 @@ if __name__ == "__main__":
     test_wrappers_and_nesting()
     test_unpack_args()
     test_leaf_regression()
+    test_named_tuple()
+    test_tuple_walk()
     print("Done.")

@@ -70,6 +70,17 @@ def validate(name: str,
         full = f"{name}.{field}" if name else field
         sub = field_value(value, field)
         validate(full, sub, field_hint, frozenset())
+    # 3b. tuple[X, Y, ...] or tuple[X, ...]: walk indexed elements.
+    #    No MISSING case; tuples can't be missing members at runtime.
+    if origin is tuple:
+        args = get_args(hint)
+        if args and isinstance(value, (tuple, list)):
+            if len(args) == 2 and args[1] is Ellipsis:
+                pattern = (args[0],) * len(value)
+            else:
+                pattern = args
+            for i, (elem, elem_hint) in enumerate(zip(value, pattern)):
+                validate(f"{name}[{i}]" if name else f"[{i}]", elem, elem_hint)
     # 4. (Union would go here. Not today.)
 
 
