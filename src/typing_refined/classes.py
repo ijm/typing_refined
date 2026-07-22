@@ -71,7 +71,6 @@ class OperatorR(Predicate, CallR):
 class Combinator(Predicate):
     """ Predicate partial construction wrapper for the fanout:
         {name}(predicates...)(x) -> {operator.__name__}(p(x) for p in predicates)"""
-    #combinator: Callable[..., bool]
         
     def __call__(self, value: Any) -> bool:
         return self.neg ^ self.operator(p(value) for p in self.bound)

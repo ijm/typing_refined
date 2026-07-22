@@ -5,9 +5,6 @@ These are NOT in the core predicates module because they are either:
 - Application-specific (email, URL, UUID, etc.)
 - Pre-composed combinations of core primitives
 - Have opinionated defaults (regex patterns)
-
-Import explicitly when needed:
-    from typing_refined.batteries import Email, URL, UUID, CountGe, LengthGe
 """
 from typing import Any
 import re
@@ -48,7 +45,7 @@ def _isbn(regexp: re.Pattern[str], trans: dict[int, int | None], s: str) -> str 
     
 class IsISBN10Check(Operator):
     ISBN10_RE: re.Pattern[str] = re.compile(r'(?:ISBN[- ]*)?((?:\d[- ]*){9}[0-9Xx])')
-    ISBN10_TRANS: dict[int, int | None] = str.maketrans("Xx","::","- ")
+    ISBN10_TRANS: dict[int, int | None] = str.maketrans("Xx", "::", "- ")
     
     @classmethod 
     def checksum(cls, s: str) -> bool:
@@ -81,7 +78,6 @@ LengthGt = make_predicate('LengthGt', ComposePartial, comp=(Gt, len))
 LengthLe = make_predicate('LengthLe', ComposePartial, comp=(Le, len))
 
 # More Count predicates (class pattern like HasAtLeastOf)
-
 class CountGe(Compose):
     def __init__(self, n: int, x: Any):
         super().__init__(Ge(n), CountOf(x))
@@ -99,7 +95,6 @@ class CountLt(Compose):
         super().__init__(Lt(n), CountOf(x))
 
 # Numeric conveniences
-
 Positive = Gt(0)
 Negative = Lt(0)
 NonZero = Ne(0)
