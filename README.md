@@ -9,11 +9,14 @@ pip install typing_refined
 ```
 
 ## Design Principles
+A refined or refinement type is defined as "a type together with one or more predicates restricting the set of values belonging to that type." It is often written as `{x: T | P(x)}` and in python we can get close with `Annotated[T, P]`.
 
-- **Refinement types**: `{x: T | P(x)}` expressed as `Annotated[T, P(x)]`
-- **Predicates are triple-duty**: callable as `pred(x)`, annotation metadata as `Annotated[T, pred(x)]`, introspectable AST as `dataclasses.asdict(pred)`)
+Python's `Annotated[]` types are often seen as passive information to be interpreted by some external library or application. Without affecting that interpretation, typing_refined represents refinements as ordinary immutable Python objects. There are three orthogonal concerns: the same object can be attached to type annotations, executed directly, or inspected structurally without requiring separate representations or translation between them.
+
+- **Refinement types**: `{x: T | P(x)}` expressed as `Annotated[T, P]`
+- **Predicates are triple-role**: callable as `predicate(x)`, annotation metadata as `Annotated[T, predicate]`, introspectable AST as `dataclasses.asdict(predicate)`
 - **Define once, reuse everywhere**: Same predicate object for runtime validation, static analysis, tooling, etc. (DRY)
-- **Simplistic Algebra**: compose with `PAll`, `PAny`, `Compose`. These are explicit and introspectable, and extensive enough without needing to build an complex expression algebra.
+- **Simple Algebra**: compose with `PAll`, `PAny`, `Compose`. These are explicit and introspectable, and extensive enough without needing to build an complex expression algebra.
 
 ### Available Predicates
 
@@ -60,8 +63,8 @@ from typing_refined import Ge, Lt, validate
 PositiveUnder100 = Annotated[int, Ge(1), Lt(100)]
 
 # Manual validation
-validate("foo", PositiveUnder100, 50)   # Ok
-validate("foo", PositiveUnder100, 200)  # raises ValidationError
+validate("foo", 50, PositiveUnder100)   # Ok
+validate("foo", 200, PositiveUnder100)  # raises ValidationError
 ```
 
 ### Class Field Validation with Validator()
