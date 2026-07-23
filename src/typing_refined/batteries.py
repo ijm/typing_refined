@@ -43,7 +43,7 @@ def _isbn(regexp: re.Pattern[str], trans: dict[int, int | None], s: str) -> str 
     return m[1].translate(trans) if m else None
     
     
-class IsISBN10Check(Operator):
+class _IsISBN10(Operator):
     ISBN10_RE: re.Pattern[str] = re.compile(r'(?:ISBN[- ]*)?((?:\d[- ]*){9}[0-9Xx])')
     ISBN10_TRANS: dict[int, int | None] = str.maketrans("Xx", "::", "- ")
     
@@ -55,9 +55,10 @@ class IsISBN10Check(Operator):
             
     operator = checksum
     
-IsISBN10Format = _make_regex('IsISBN10Format', IsISBN10Check.ISBN10_RE)
+IsISBN10Check = _IsISBN10()
+IsISBN10Format = _make_regex('IsISBN10Format', _IsISBN10.ISBN10_RE)
 
-class IsISBN13Check(Operator):
+class _IsISBN13(Operator):
     ISBN13_RE: re.Pattern[str] = re.compile(r'(?:ISBN[- ]*)?((?:\d[- ]*){13})' )
     ISBN13_TRANS: dict[int, int | None] = str.maketrans("", "", "- ")
     
@@ -68,8 +69,9 @@ class IsISBN13Check(Operator):
             for i, c in enumerate(x)) % 10 == 0 if x else False
         
     operator = checksum
-  
-IsISBN13Format = _make_regex('IsISBN13Format', IsISBN13Check.ISBN13_RE)
+    
+IsISBN13Check = _IsISBN13()
+IsISBN13Format = _make_regex('IsISBN13Format', _IsISBN13.ISBN13_RE)
         
 # More Length predicates
 LengthEq = make_predicate('LengthEq', ComposePartial, comp=(Eq, len))
